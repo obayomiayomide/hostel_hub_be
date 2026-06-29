@@ -1,0 +1,281 @@
+// Prisma schema for Student Hostel Allocation Management System
+// Database: MySQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------------------------
+
+enum Role {
+  STUDENT
+  WARDEN
+  ADMIN
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum HostelType {
+  MALE
+  FEMALE
+  MIXED
+}
+
+enum RoomStatus {
+  AVAILABLE
+  FULL
+  MAINTENANCE
+  CLOSED
+}
+
+enum BedStatus {
+  VACANT
+  OCCUPIED
+  RESERVED
+}
+
+enum ApplicationStatus {
+  PENDING
+  PAYMENT_PENDING
+  APPROVED
+  ALLOCATED
+  REJECTED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum AllocationStatus {
+  ACTIVE
+  VACATED
+  TRANSFERRED
+}
+
+enum MaintenanceCategory {
+  PLUMBING
+  ELECTRICAL
+  STRUCTURAL
+  FURNITURE
+  CLEANING
+  OTHER
+}
+
+enum MaintenancePriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MaintenanceStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+// ---------------------------------------------------------------------------
+// MODELS
+// ---------------------------------------------------------------------------
+
+model User {
+  id              Int       @id @default(autoincrement())
+  fullName        String
+  email           String    @unique
+  password        String
+  phone           String?
+  gender          Gender
+  role            Role      @default(STUDENT)
+  matricNumber    String?   @unique
+  department      String?
+  level           String?
+  isActive        Boolean   @default(true)
+  avatarUrl       String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  applications        Application[]
+  allocations          Allocation[]
+  payments             Payment[]
+  maintenanceRequests  MaintenanceRequest[]
+  notifications        Notification[]
+  wardenHostels         Hostel[]              @relation("HostelWarden")
+  maintenanceUpdates    MaintenanceRequest[]  @relation("MaintenanceHandler")
+
+  @@map("users")
+}
+
+model AcademicSession {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique // e.g. "2025/2026"
+  isActive  Boolean  @default(false)
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime @default(now())
+
+  applications Application[]
+  payments     Payment[]
+  allocations  Allocation[]
+
+  @@map("academic_sessions")
+}
+
+model Hostel {
+  id          Int        @id @default(autoincrement())
+  name        String
+  type        HostelType
+  description String?    @db.Text
+  location    String?
+  totalRooms  Int        @default(0)
+  imageUrl    String?
+  isActive    Boolean    @default(true)
+  wardenId    Int?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  warden       User?         @relation("HostelWarden", fields: [wardenId], references: [id])
+  rooms        Room[]
+  applications Application[]
+
+  @@map("hostels")
+}
+
+model Room {
+  id             Int        @id @default(autoincrement())
+  hostelId       Int
+  roomNumber     String
+  floor          String?
+  capacity       Int        @default(4)
+  pricePerSession Decimal   @db.Decimal(10, 2) @default(0)
+  status         RoomStatus @default(AVAILABLE)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  hostel             Hostel               @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  beds               Bed[]
+  maintenanceRequests MaintenanceRequest[]
+
+  @@unique([hostelId, roomNumber])
+  @@map("rooms")
+}
+
+model Bed {
+  id        Int       @id @default(autoincrement())
+  roomId    Int
+  bedNumber String
+  status    BedStatus @default(VACANT)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  room        Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  allocations Allocation[]
+
+  @@unique([roomId, bedNumber])
+  @@map("beds")
+}
+
+model Application {
+  id               Int               @id @default(autoincrement())
+  studentId        Int
+  hostelId         Int
+  sessionId        Int
+  preferredRoomType String?
+  status           ApplicationStatus @default(PENDING)
+  remarks          String?           @db.Text
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  student    User            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  hostel     Hostel          @relation(fields: [hostelId], references: [id])
+  session    AcademicSession @relation(fields: [sessionId], references: [id])
+  payments   Payment[]
+  allocation Allocation?
+
+  @@map("applications")
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  studentId     Int
+  applicationId Int?
+  sessionId     Int
+  amount        Decimal       @db.Decimal(10, 2)
+  reference     String        @unique
+  method        String        @default("CARD")
+  status        PaymentStatus @default(PENDING)
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  student     User            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  application Application?    @relation(fields: [applicationId], references: [id])
+  session     AcademicSession @relation(fields: [sessionId], references: [id])
+
+  @@map("payments")
+}
+
+model Allocation {
+  id            Int               @id @default(autoincrement())
+  studentId     Int
+  bedId         Int
+  applicationId Int               @unique
+  sessionId     Int
+  status        AllocationStatus  @default(ACTIVE)
+  allocatedAt   DateTime          @default(now())
+  vacatedAt     DateTime?
+
+  student     User            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  bed         Bed             @relation(fields: [bedId], references: [id])
+  application Application     @relation(fields: [applicationId], references: [id])
+  session     AcademicSession @relation(fields: [sessionId], references: [id])
+
+  @@map("allocations")
+}
+
+model MaintenanceRequest {
+  id          Int                 @id @default(autoincrement())
+  studentId   Int
+  roomId      Int?
+  category    MaintenanceCategory
+  priority    MaintenancePriority @default(MEDIUM)
+  description String              @db.Text
+  photoUrl    String?
+  status      MaintenanceStatus   @default(OPEN)
+  handledById Int?
+  resolvedAt  DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  student   User  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  room      Room? @relation(fields: [roomId], references: [id])
+  handledBy User? @relation("MaintenanceHandler", fields: [handledById], references: [id])
+
+  @@map("maintenance_requests")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
