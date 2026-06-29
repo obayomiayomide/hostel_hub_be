@@ -6,14 +6,14 @@ of the accompanying project report.
 
 ## Tech Stack
 
-| Layer          | Technology               |
-|----------------|---------------------------|
-| Runtime        | Node.js (v18+)            |
-| Framework      | Express.js                |
-| ORM            | Prisma                    |
-| Database       | MySQL                     |
-| Auth           | JWT (JSON Web Tokens) + bcrypt |
-| Validation     | Zod                        |
+| Layer      | Technology                     |
+| ---------- | ------------------------------ |
+| Runtime    | Node.js (v18+)                 |
+| Framework  | Express.js                     |
+| ORM        | Prisma                         |
+| Database   | PostgreSQL                     |
+| Auth       | JWT (JSON Web Tokens) + bcrypt |
+| Validation | Zod                            |
 
 ## Features
 
@@ -32,35 +32,45 @@ of the accompanying project report.
 ## Getting Started
 
 ### 1. Prerequisites
+
 - Node.js 18+
 - A running MySQL server (local, Docker, or a cloud instance such as PlanetScale/Railway/Aiven)
 
 ### 2. Install dependencies
+
 ```bash
 cd backend
 npm install
 ```
 
 ### 3. Configure environment variables
+
 ```bash
 cp .env.example .env
 ```
+
 Edit `.env` and set at minimum:
+
 - `DATABASE_URL` — your MySQL connection string
 - `JWT_SECRET` — any long random string
 
 ### 4. Set up the database
+
 ```bash
 npm run prisma:generate
 npm run prisma:migrate
 ```
+
 This creates all tables defined in `prisma/schema.prisma`.
 
 ### 5. Seed sample data (optional but recommended)
+
 ```bash
 npm run seed
 ```
+
 This creates:
+
 - Admin: `admin@hostel.edu` / `Admin@12345` (or whatever you set in `.env`)
 - Warden: `warden@hostel.edu` / `Warden@123`
 - Student: `student@hostel.edu` / `Student@123`
@@ -68,30 +78,32 @@ This creates:
 - An active academic session (`2025/2026`)
 
 ### 6. Run the server
+
 ```bash
 npm run dev      # development with auto-reload (nodemon)
 npm start        # production
 ```
+
 The API will be available at `http://localhost:5000`.
 
 ## API Overview
 
 All routes are prefixed with `/api/v1`.
 
-| Resource        | Base Path             |
-|-----------------|------------------------|
-| Auth            | `/api/v1/auth`         |
-| Users           | `/api/v1/users`        |
-| Hostels         | `/api/v1/hostels`      |
-| Rooms           | `/api/v1/rooms`        |
-| Applications    | `/api/v1/applications` |
-| Payments        | `/api/v1/payments`     |
-| Allocations     | `/api/v1/allocations`  |
-| Maintenance     | `/api/v1/maintenance`  |
-| Dashboard       | `/api/v1/dashboard`    |
-| Notifications    | `/api/v1/notifications`|
-| Academic Sessions| `/api/v1/sessions`     |
-| Health check     | `GET /api/v1/health`   |
+| Resource          | Base Path               |
+| ----------------- | ----------------------- |
+| Auth              | `/api/v1/auth`          |
+| Users             | `/api/v1/users`         |
+| Hostels           | `/api/v1/hostels`       |
+| Rooms             | `/api/v1/rooms`         |
+| Applications      | `/api/v1/applications`  |
+| Payments          | `/api/v1/payments`      |
+| Allocations       | `/api/v1/allocations`   |
+| Maintenance       | `/api/v1/maintenance`   |
+| Dashboard         | `/api/v1/dashboard`     |
+| Notifications     | `/api/v1/notifications` |
+| Academic Sessions | `/api/v1/sessions`      |
+| Health check      | `GET /api/v1/health`    |
 
 Every protected route expects a header: `Authorization: Bearer <token>`.
 
